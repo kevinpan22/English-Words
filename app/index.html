@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="背单词神器">
+    <meta name="theme-color" content="#4a90e2">
+    <title>背单词神器 - 多设备版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 启动屏幕 -->
+    <div id="splashScreen" class="splash-screen">
+        <img src="icon-192.png" alt="背单词神器">
+        <p>背单词神器</p>
+        <small>手机 · 平板 · 电脑全平台支持</small>
+    </div>
+
+    <div class="container">
+        <!-- 顶部计分板 -->
+        <header class="score-board">
+            <div class="score-item">
+                <span class="score-label">总分</span>
+                <span id="score" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">连续</span>
+                <span id="streak" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">已学</span>
+                <span id="totalLearned" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">正确率</span>
+                <span id="correctRate" class="score-value">0%</span>
+            </div>
+        </header>
+
+        <!-- 单词卡片 -->
+        <main class="main-content">
+            <div class="word-card">
+                <div class="word-header">
+                    <span id="currentWord" class="word-text">Welcome</span>
+                    <button onclick="playCurrentWord()" class="sound-btn" aria-label="播放发音">🔊</button>
+                </div>
+                <div id="phonetic" class="phonetic">/ˈwelkəm/</div>
+                <div id="meaning" class="meaning">欢迎</div>
+                <div id="memoryTip" class="memory-tip">记忆提示：well(好) + come(来) = 欢迎</div>
+            </div>
+
+            <!-- 拼写区域 -->
+            <div id="slots" class="slots-container"></div>
+            <div id="letters" class="letters-container"></div>
+            <div id="feedback" class="feedback"></div>
+        </main>
+
+        <!-- 底部按钮组 -->
+        <footer class="footer-buttons">
+            <button onclick="newWord()" class="btn btn-primary">下一词</button>
+            <button onclick="reviewMistakes()" class="btn btn-secondary">复习错词</button>
+            <button onclick="showHint()" class="btn btn-secondary">提示</button>
+            <button onclick="showImportDialog()" class="btn btn-secondary">批量添加</button>
+            <button onclick="showAIChat()" class="btn btn-secondary">AI助手</button>
+            <button onclick="showAPIKeyDialog()" class="btn btn-icon">⚙️</button>
+        </footer>
+    </div>
+
+    <!-- 批量导入弹窗 -->
+    <div id="importDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>批量添加单词</h3>
+            <p class="dialog-hint">每行一个单词，格式：单词,音标,含义,记忆提示,难度</p>
+            <textarea id="wordInput" rows="8" placeholder="例如：
+hello,/həˈləʊ/,你好,打招呼的基础用语,1
+world,/wɜːld/,世界,地球就是一个世界,2
+
+或者只输入单词（将自动查询）：
+apple
+banana"></textarea>
+            <label class="checkbox-label">
+                <input type="checkbox" id="replaceMode">
+                <span>替换原有词库（清除默认单词，只保留导入的）</span>
+            </label>
+            <div class="dialog-buttons">
+                <button onclick="importWords()" class="btn btn-primary">导入</button>
+                <button onclick="closeImportDialog()" class="btn btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DeepSeek API Key 设置弹窗 -->
+    <div id="apiKeyDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>DeepSeek API 设置（可选）</h3>
+            <p class="dialog-hint">输入 API Key 后可使用 AI 助手功能（需付费）</p>
+            <input type="password" id="apiKeyInput" placeholder="sk-..." class="input-field">
+            <div class="dialog-buttons">
+                <button onclick="saveAPIKey()" class="btn btn-primary">保存</button>
+                <button onclick="closeAPIKeyDialog()" class="btn btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 助手弹窗 -->
+    <div id="aiChatDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>AI 助手 — <span id="aiChatWord" class="ai-word"></span></h3>
+            <div id="aiChatHistory" class="chat-history"></div>
+            <input type="text" id="aiChatInput" placeholder="例句？词根？近义词？…"
+                   class="input-field" onkeydown="if(event.key==='Enter')sendAIQuestion()">
+            <div class="dialog-buttons">
+                <button onclick="sendAIQuestion()" class="btn btn-primary">发送</button>
+                <button onclick="closeAIChat()" class="btn btn-secondary">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本引入 -->
+    <script src="wordlist.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // Service Worker 注册
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('ServiceWorker 注册成功'))
+                    .catch(err => console.log('ServiceWorker 注册失败:', err));
+            });
+        }
+    </script>
+</body>
+</html>

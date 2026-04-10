@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="背单词神器">
+    <meta name="theme-color" content="#4a90e2">
+    <title>背单词神器</title>
+    <link rel="stylesheet" href="wordmaster.css">
+</head>
+<body>
+    <div id="splashScreen" class="splash-screen">
+        <img src="icon-192.png" alt="背单词神器">
+        <p>背单词神器</p>
+    </div>
+    <div class="container">
+        <header>
+            <div id="scoreBoard">
+                <div class="score-item">总分：<span id="score">0</span></div>
+                <div class="score-item">连续：<span id="streak">0</span></div>
+                <div class="score-item">已学：<span id="totalLearned">0</span></div>
+                <div class="score-item">正确率：<span id="correctRate">0%</span></div>
+            </div>
+        </header>
+
+        <main>
+            <div id="wordCard">
+                <div class="word-header">
+                    <span id="currentWord" class="word-text">Welcome</span>
+                    <button onclick="playCurrentWord()" class="sound-btn">🔊</button>
+                </div>
+                <div id="phonetic" class="phonetic">/ˈwelkəm/</div>
+                <div id="meaning" class="meaning">欢迎</div>
+                <div id="memoryTip" class="memory-tip">记忆提示：well(好) + come(来) = 欢迎</div>
+            </div>
+
+            <div id="slots" class="slots-container"></div>
+            <div id="letters" class="letters-container"></div>
+            <div id="feedback" class="feedback"></div>
+        </main>
+
+        <footer>
+            <div class="button-group">
+                <button onclick="newWord()" class="primary-btn">下一词</button>
+                <button onclick="reviewMistakes()" class="secondary-btn">复习错词</button>
+                <button onclick="showHint()" class="secondary-btn">提示</button>
+                <button onclick="showImportDialog()" class="secondary-btn">批量添加</button>
+                <button onclick="showAIChat()" class="secondary-btn">AI助手</button>
+                <button onclick="showAPIKeyDialog()" class="secondary-btn">⚙️</button>
+            </div>
+        </footer>
+
+        <!-- 添加导入弹窗 -->
+        <div id="importDialog" class="dialog">
+            <div class="dialog-content">
+                <h3>批量添加单词</h3>
+                <p>每行一个单词，格式：单词,音标,含义,记忆提示,难度</p>
+                <textarea id="wordInput" rows="10" placeholder="例如：
+hello,/həˈləʊ/,你好,打招呼的基础用语,1
+world,/wɜːld/,世界,地球就是一个世界,2"></textarea>
+                <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:16px;">
+                    <input type="checkbox" id="replaceMode" style="width:18px;height:18px;">
+                    替换原有词库（清除默认单词，只保留导入的）
+                </label>
+                <div class="button-group">
+                    <button onclick="importWords()" class="primary-btn">导入</button>
+                    <button onclick="closeImportDialog()" class="secondary-btn">取消</button>
+                </div>
+            </div>
+        </div>
+        <!-- DeepSeek API Key 设置弹窗 -->
+        <div id="apiKeyDialog" class="dialog">
+            <div class="dialog-content">
+                <h3>DeepSeek API 设置</h3>
+                <p>输入你的 DeepSeek API Key，保存后可使用 AI 功能</p>
+                <input type="password" id="apiKeyInput" placeholder="sk-..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:16px;margin:10px 0;box-sizing:border-box;">
+                <div class="button-group">
+                    <button onclick="saveAPIKey()" class="primary-btn">保存</button>
+                    <button onclick="closeAPIKeyDialog()" class="secondary-btn">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI 助手弹窗 -->
+        <div id="aiChatDialog" class="dialog">
+            <div class="dialog-content">
+                <h3>AI 助手 — <span id="aiChatWord" style="color:#4a90e2"></span></h3>
+                <div id="aiChatHistory" style="max-height:280px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:12px;margin:10px 0;min-height:80px;font-size:16px;line-height:1.7;"></div>
+                <input type="text" id="aiChatInput" placeholder="例句？词根？近义词？…" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:16px;margin:6px 0;box-sizing:border-box;" onkeydown="if(event.key==='Enter')sendAIQuestion()">
+                <div class="button-group">
+                    <button onclick="sendAIQuestion()" class="primary-btn">发送</button>
+                    <button onclick="closeAIChat()" class="secondary-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 在其他 script 标签之前添加 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="wordlist.js"></script>
+    <script src="wordmaster.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker 注册成功');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker 注册失败: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

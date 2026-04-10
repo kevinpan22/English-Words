@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清除缓存</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .warning {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        .steps {
+            text-align: left;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .steps li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔄 清除缓存工具</h1>
+        <p>如果看到单词和翻译混乱，请使用此工具清除缓存</p>
+
+        <div id="status" class="status info">
+            正在检查缓存状态...
+        </div>
+
+        <button class="btn-primary" onclick="clearAllCache()">一键清除所有缓存</button>
+        <button class="btn-secondary" onclick="goToApp()">清除后打开应用</button>
+
+        <div class="steps">
+            <h3>手动清除缓存步骤：</h3>
+            <ol>
+                <li><strong>Chrome/Edge：</strong>按 Cmd+Shift+Delete (Mac) 或 Ctrl+Shift+Delete (Windows)</li>
+                <li>选择"缓存的图片和文件"</li>
+                <li>点击"清除数据"</li>
+                <li>刷新页面（Cmd+R 或 Ctrl+R）</li>
+            </ol>
+            <h3>或者使用强制刷新：</h3>
+            <ul>
+                <li><strong>Mac：</strong>Cmd + Shift + R</li>
+                <li><strong>Windows：</strong>Ctrl + Shift + R</li>
+                <li><strong>或者：</strong>Cmd/Ctrl + F5</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function clearAllCache() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status info';
+            statusDiv.textContent = '正在清除缓存...';
+
+            try {
+                // 1. 注销所有 Service Workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        console.log('Service Worker 已注销');
+                    }
+                }
+
+                // 2. 清除所有缓存
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    for (let cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        console.log('缓存已清除:', cacheName);
+                    }
+                }
+
+                // 3. 清除 localStorage（可选，保留学习进度）
+                // localStorage.clear(); // 取消注释以清除所有本地数据
+
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `
+                    ✅ 缓存清除成功！<br>
+                    <small>Service Worker: 已注销<br>
+                    浏览器缓存: 已清除</small>
+                `;
+
+                // 3秒后自动跳转
+                setTimeout(() => {
+                    statusDiv.innerHTML += '<br><br>3秒后自动跳转到应用...';
+                    setTimeout(() => {
+                        window.location.href = 'index.html?nocache=' + Date.now();
+                    }, 3000);
+                }, 1000);
+
+            } catch (error) {
+                statusDiv.className = 'status warning';
+                statusDiv.innerHTML = `
+                    ⚠️ 部分清除失败<br>
+                    <small>${error.message}</small><br>
+                    <small>请尝试手动清除（见下方步骤）</small>
+                `;
+            }
+        }
+
+        function goToApp() {
+            // 添加时间戳强制刷新
+            window.location.href = 'index.html?nocache=' + Date.now();
+        }
+
+        // 页面加载时检查缓存状态
+        window.addEventListener('load', async () => {
+            const statusDiv = document.getElementById('status');
+
+            try {
+                let cacheInfo = [];
+
+                // 检查 Service Worker
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    if (registrations.length > 0) {
+                        cacheInfo.push(`Service Worker: ${registrations.length} 个`);
+                    }
+                }
+
+                // 检查缓存
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    if (cacheNames.length > 0) {
+                        cacheInfo.push(`浏览器缓存: ${cacheNames.length} 个`);
+                    }
+                }
+
+                if (cacheInfo.length > 0) {
+                    statusDiv.className = 'status warning';
+                    statusDiv.innerHTML = `
+                        ⚠️ 检测到缓存<br>
+                        <small>${cacheInfo.join('<br>')}</small><br>
+                        <small>如果看到内容混乱，请点击上方按钮清除</small>
+                    `;
+                } else {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '✅ 没有检测到缓存，应用是最新的';
+                }
+            } catch (error) {
+                statusDiv.className = 'status info';
+                statusDiv.textContent = '无法检测缓存状态（可能是隐私模式）';
+            }
+        });
+    </script>
+</body>
+</html>

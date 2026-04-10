@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>测试 wonderful 翻译</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #667eea; text-align: center; }
+        .result {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .word {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .meaning {
+            font-size: 22px;
+            color: #2e7d32;
+            margin: 10px 0;
+        }
+        .status {
+            font-size: 14px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        .ok {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .preset {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 测试常用形容词翻译</h1>
+    <p style="text-align:center;color:#666;">
+        验证 wonderful 和其他常用词是否翻译正确
+    </p>
+
+    <div id="results" class="loading">加载词典中...</div>
+
+    <script>
+        // 测试词汇和预期翻译
+        const testCases = [
+            { word: 'wonderful', expected: '精彩的', category: '形容词' },
+            { word: 'great', expected: '很棒的', category: '形容词' },
+            { word: 'amazing', expected: '惊人的', category: '形容词' },
+            { word: 'excellent', expected: '优秀的', category: '形容词' },
+            { word: 'perfect', expected: '完美的', category: '形容词' },
+            { word: 'interesting', expected: '有趣的', category: '形容词' },
+            { word: 'exciting', expected: '激动的', category: '形容词' },
+            { word: 'beautiful', expected: '美丽的', category: '形容词' },
+        ];
+
+        function runTest() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.className = '';
+            resultsDiv.innerHTML = '';
+
+            let passCount = 0;
+            let totalCount = testCases.length;
+
+            testCases.forEach(({ word, expected, category }) => {
+                let actualMeaning = '未知';
+                let status = 'error';
+                let statusText = '❌ 未找到';
+
+                // 检查预设词典
+                if (typeof commonWordsMeanings !== 'undefined' && commonWordsMeanings[word]) {
+                    actualMeaning = commonWordsMeanings[word];
+
+                    if (actualMeaning === expected) {
+                        status = 'ok';
+                        statusText = '✅ 正确（预设词典）';
+                        passCount++;
+                    } else {
+                        status = 'preset';
+                        statusText = `⚠️ 不匹配（预期：${expected}）`;
+                    }
+                } else {
+                    status = 'error';
+                    statusText = '❌ 不在预设词典';
+                    actualMeaning = '（需API查询）';
+                }
+
+                resultsDiv.innerHTML += `
+                    <div class="result">
+                        <div class="word">${word}</div>
+                        <div class="meaning">翻译：${actualMeaning}</div>
+                        <div class="status ${status}">${statusText}</div>
+                    </div>
+                `;
+            });
+
+            // 显示总结
+            const passRate = (passCount / totalCount * 100).toFixed(1);
+            const summaryClass = passCount === totalCount ? 'ok' : (passCount > 0 ? 'preset' : 'error');
+
+            resultsDiv.innerHTML += `
+                <div style="text-align:center;margin-top:30px;padding:25px;background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+                    <h2 style="margin:0 0 15px 0;color:#333;">测试结果</h2>
+                    <div style="font-size:48px;font-weight:bold;color:${passCount === totalCount ? '#2e7d32' : '#ff9800'};margin:15px 0;">
+                        ${passCount} / ${totalCount}
+                    </div>
+                    <div style="font-size:18px;color:#666;">
+                        通过率：${passRate}%
+                    </div>
+                    ${passCount === totalCount ?
+                        '<p style="color:#2e7d32;margin-top:15px;font-size:16px;">✅ 所有测试通过！</p>' :
+                        '<p style="color:#ff9800;margin-top:15px;font-size:16px;">⚠️ 部分测试未通过，请清除缓存后重试</p>'
+                    }
+                </div>
+            `;
+        }
+
+        // 等待 app.js 加载
+        if (typeof commonWordsMeanings === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'app.js?v=' + Date.now();
+            script.onload = () => {
+                setTimeout(runTest, 300);
+            };
+            script.onerror = () => {
+                document.getElementById('results').innerHTML = `
+                    <div class="result" style="text-align:center;">
+                        <h2 style="color:#c62828;">❌ 无法加载 app.js</h2>
+                        <p>请确保：</p>
+                        <ul style="text-align:left;display:inline-block;">
+                            <li>app.js 文件存在</li>
+                            <li>已清除浏览器缓存</li>
+                            <li>使用正确的路径访问</li>
+                        </ul>
+                        <p style="margin-top:20px;">
+                            <a href="clear-cache.html" style="color:#1565c0;font-weight:bold;text-decoration:none;padding:10px 20px;background:#e3f2fd;border-radius:5px;">
+                                → 清除缓存后重试
+                            </a>
+                        </p>
+                    </div>
+                `;
+            };
+            document.head.appendChild(script);
+        } else {
+            runTest();
+        }
+    </script>
+</body>
+</html>

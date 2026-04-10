@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>快速测试</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #667eea; text-align: center; }
+        .test-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .word {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            min-width: 120px;
+        }
+        .meaning {
+            font-size: 18px;
+            color: #2e7d32;
+            flex: 1;
+            text-align: center;
+        }
+        .status {
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        .ok {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 快速测试 - 验证翻译是否正确</h1>
+    <p style="text-align:center;color:#666;">
+        如果下面的翻译是中文，说明正常。如果是英文或乱码，说明缓存有问题。
+    </p>
+
+    <div id="results" class="loading">加载中...</div>
+
+    <script>
+        // 直接定义测试词典（不依赖外部文件）
+        const testWords = {
+            'apple': '苹果',
+            'cat': '猫',
+            'dog': '狗',
+            'elephant': '大象',
+            'school': '学校',
+            'water': '水',
+            'hello': '你好',
+            'computer': '电脑'
+        };
+
+        function runTest() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.className = '';
+            resultsDiv.innerHTML = '';
+
+            let allOk = true;
+
+            for (let [word, expectedMeaning] of Object.entries(testWords)) {
+                // 检查预设词典
+                let actualMeaning = '未知';
+                let isOk = false;
+
+                // 尝试从 app.js 加载的词典获取
+                if (typeof commonWordsMeanings !== 'undefined' && commonWordsMeanings[word]) {
+                    actualMeaning = commonWordsMeanings[word];
+                    isOk = actualMeaning === expectedMeaning;
+                } else {
+                    actualMeaning = '❌ 词典未加载';
+                    isOk = false;
+                }
+
+                if (!isOk) allOk = false;
+
+                resultsDiv.innerHTML += `
+                    <div class="test-item">
+                        <div class="word">${word}</div>
+                        <div class="meaning">${actualMeaning}</div>
+                        <div class="status ${isOk ? 'ok' : 'error'}">
+                            ${isOk ? '✅ 正确' : '❌ 错误'}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 显示总结
+            resultsDiv.innerHTML += `
+                <div style="text-align:center;margin-top:30px;padding:20px;background:${allOk ? '#e8f5e9' : '#ffebee'};border-radius:8px;">
+                    <h2 style="margin:0;color:${allOk ? '#2e7d32' : '#c62828'};">
+                        ${allOk ? '✅ 测试通过！翻译正常' : '❌ 测试失败！请清除缓存'}
+                    </h2>
+                    ${!allOk ? '<p style="margin:10px 0 0 0;"><a href="clear-cache.html" style="color:#1565c0;font-weight:bold;">→ 点击这里清除缓存</a></p>' : ''}
+                </div>
+            `;
+        }
+
+        // 等待 app.js 加载
+        if (typeof commonWordsMeanings === 'undefined') {
+            // 动态加载 app.js
+            const script = document.createElement('script');
+            script.src = 'app.js?v=' + Date.now();
+            script.onload = () => {
+                setTimeout(runTest, 500);
+            };
+            script.onerror = () => {
+                document.getElementById('results').innerHTML = `
+                    <div style="text-align:center;color:#c62828;">
+                        <h2>❌ 无法加载 app.js</h2>
+                        <p>请确保文件存在，或<a href="clear-cache.html">清除缓存后重试</a></p>
+                    </div>
+                `;
+            };
+            document.head.appendChild(script);
+        } else {
+            runTest();
+        }
+    </script>
+</body>
+</html>

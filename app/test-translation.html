@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻译效果测试</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .test-grid > div {
+            padding: 12px;
+            border-radius: 5px;
+        }
+        .header {
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            text-align: center;
+        }
+        .word {
+            background: #e3f2fd;
+            font-weight: bold;
+            text-align: center;
+        }
+        .old {
+            background: #ffebee;
+            color: #c62828;
+            font-size: 13px;
+        }
+        .new {
+            background: #e8f5e9;
+            color: #2e7d32;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .preset {
+            background: #4caf50;
+            color: white;
+        }
+        .api {
+            background: #ff9800;
+            color: white;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+        }
+        .stat-card p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .demo-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .demo-btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .demo-btn:hover {
+            background: #5568d3;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        .legend {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .legend span {
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📖 翻译优化效果对比</h1>
+
+    <div class="section">
+        <h2>📊 优化统计</h2>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>200+</h3>
+                <p>预设常用单词</p>
+            </div>
+            <div class="stat-card">
+                <h3>0ms</h3>
+                <p>预设词查询速度</p>
+            </div>
+            <div class="stat-card">
+                <h3>15字</h3>
+                <p>中文释义长度限制</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>✨ 对比示例（常用单词-预设翻译）</h2>
+        <div class="legend">
+            <span class="badge preset">预设</span> 使用内置词典，瞬时返回
+            <span class="badge api">API</span> 调用在线API，可能较慢
+        </div>
+        <div class="test-grid">
+            <div class="header">单词</div>
+            <div class="header">❌ 优化前（长）</div>
+            <div class="header">✅ 优化后（短）</div>
+
+            <div class="word">apple<span class="badge preset">预设</span></div>
+            <div class="old">一种圆形的水果，通常是红色或绿色的，生长在树上</div>
+            <div class="new">苹果</div>
+
+            <div class="word">cat<span class="badge preset">预设</span></div>
+            <div class="old">一种小型的食肉类家养动物，有柔软的毛皮</div>
+            <div class="new">猫</div>
+
+            <div class="word">run<span class="badge preset">预设</span></div>
+            <div class="old">以比走路更快的速度移动，通过快速交替移动双腿</div>
+            <div class="new">跑</div>
+
+            <div class="word">happy<span class="badge preset">预设</span></div>
+            <div class="old">感到或表现出愉悦或满意的状态，尤其是对生活的满足</div>
+            <div class="new">开心的</div>
+
+            <div class="word">school<span class="badge preset">预设</span></div>
+            <div class="old">一个进行教学的机构，尤其是为儿童和青少年提供初等或中等教育</div>
+            <div class="new">学校</div>
+
+            <div class="word">water<span class="badge preset">预设</span></div>
+            <div class="old">一种无色、透明、无臭、无味的液体，化学式为H2O</div>
+            <div class="new">水</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔧 对比示例（更多单词-智能简化）</h2>
+        <div class="legend">
+            ✅ 常用单词已添加到预设词典，瞬时返回准确翻译
+        </div>
+        <div class="test-grid">
+            <div class="header">单词</div>
+            <div class="header">❌ 优化前（长）</div>
+            <div class="header">✅ 优化后（短）</div>
+
+            <div class="word">elephant<span class="badge preset">预设</span></div>
+            <div class="old">一种非常大的哺乳动物，拥有长鼻子（称为象鼻），大耳朵，厚皮，主要生活在非洲和亚洲</div>
+            <div class="new">大象</div>
+
+            <div class="word">giraffe<span class="badge preset">预设</span></div>
+            <div class="old">一种非常高的非洲动物，有长脖子和长腿，身上有棕色斑块</div>
+            <div class="new">长颈鹿</div>
+
+            <div class="word">butterfly<span class="badge preset">预设</span></div>
+            <div class="old">一种有色彩鲜艳翅膀的飞行昆虫，白天活动，从毛虫变态而来</div>
+            <div class="new">蝴蝶</div>
+
+            <div class="word">computer<span class="badge preset">预设</span></div>
+            <div class="old">一种电子设备，能够存储、检索和处理数据，可以进行计算和执行程序</div>
+            <div class="new">电脑</div>
+
+            <div class="word">beautiful<span class="badge preset">预设</span></div>
+            <div class="old">令人愉悦的视觉感受，具有美学上的吸引力，让人感到愉快或满意</div>
+            <div class="new">美丽的</div>
+
+            <div class="word">library<span class="badge preset">预设</span></div>
+            <div class="old">一个收藏书籍、期刊和其他材料供人们阅读、学习或借阅的场所</div>
+            <div class="new">图书馆</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🧪 实时测试</h2>
+        <p>输入一个单词，看看优化后的翻译效果：</p>
+        <input type="text" class="demo-input" id="testWord" placeholder="输入英文单词，例如：apple, cat, book">
+        <button class="demo-btn" onclick="testTranslation()">测试翻译</button>
+
+        <div id="testResult" class="result">
+            <strong>结果：</strong>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📚 预设词典覆盖范围</h2>
+        <ul>
+            <li>🐾 动物：cat, dog, bird, fish, rabbit, elephant, tiger, lion, monkey, panda...</li>
+            <li>🍎 水果：apple, banana, orange, grape, watermelon, strawberry, peach...</li>
+            <li>🎨 颜色：red, blue, green, yellow, black, white, purple, pink, brown...</li>
+            <li>🔢 数字：one, two, three, four, five, six, seven, eight, nine, ten...</li>
+            <li>👨‍👩‍👧 家庭：father, mother, brother, sister, grandpa, grandma, family...</li>
+            <li>🏃 动词：go, come, eat, drink, sleep, run, walk, jump, swim, fly, read, write...</li>
+            <li>📏 形容词：big, small, long, short, tall, hot, cold, new, old, good, bad...</li>
+            <li>📚 学校：school, teacher, student, book, pen, pencil, desk, chair, class...</li>
+            <li>🏠 地点：home, house, room, park, hospital, store, library, zoo, farm...</li>
+            <li>⏰ 时间：day, week, month, year, today, tomorrow, yesterday, morning...</li>
+        </ul>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        async function testTranslation() {
+            const word = document.getElementById('testWord').value.trim().toLowerCase();
+            const resultDiv = document.getElementById('testResult');
+            const contentDiv = document.getElementById('resultContent');
+
+            if (!word) {
+                alert('请输入单词');
+                return;
+            }
+
+            resultDiv.classList.add('show');
+            contentDiv.innerHTML = '⏳ 查询中...';
+
+            try {
+                const result = await fetchCompleteWordInfo(word);
+
+                const isPreset = commonWordsMeanings[word] ? '✅ 预设词典' : '🔍 API查询';
+                const speed = commonWordsMeanings[word] ? '瞬时（0ms）' : '约500ms';
+
+                contentDiv.innerHTML = `
+                    <p><strong>单词：</strong>${result.word} <span class="badge ${commonWordsMeanings[word] ? 'preset' : 'api'}">${isPreset}</span></p>
+                    <p><strong>音标：</strong>${result.phonetic || '（无音标）'}</p>
+                    <p><strong>释义：</strong>${result.meaning}</p>
+                    <p><strong>长度：</strong>${result.meaning.length} 字符</p>
+                    <p><strong>速度：</strong>${speed}</p>
+                    <p style="color: #27ae60; margin-top: 10px;">
+                        ${result.meaning.length <= 15 ? '✅ 翻译简短，适合学生！' : '⚠️ 翻译较长，建议添加到预设词典'}
+                    </p>
+                `;
+            } catch (e) {
+                contentDiv.innerHTML = `<p style="color: red;">❌ 查询失败：${e.message}</p>`;
+            }
+        }
+
+        // 回车键测试
+        document.getElementById('testWord').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testTranslation();
+            }
+        });
+    </script>
+</body>
+</html>
