@@ -483,120 +483,34 @@ async function fetchWordInfo(word) {
     }
 }
 
-// 2. 简化英文定义（适合学生）- 智能提取核心名词
-function simplifyDefinition(definition) {
-    if (!definition) return '';
-
-    let simplified = definition.toLowerCase();
-
-    // 移除括号内容
-    simplified = simplified.replace(/\([^)]*\)/g, '');
-
-    // 移除多余的从句（如 "especially", "typically" 等后面的内容）
-    simplified = simplified.replace(/[,;]\s*(especially|typically|often|usually|generally|particularly|mainly|primarily).*$/i, '');
-
-    // 只保留第一个句子或短语
-    simplified = simplified.split(/[.;]/)[0];
-
-    // 尝试提取核心名词（通过常见模式）
-    // 模式1: "a/an [形容词] 名词" → 提取名词
-    let nounMatch = simplified.match(/\b(?:a|an|the)\s+(?:\w+\s+)*?(\w+)$/i);
-    if (nounMatch && nounMatch[1]) {
-        simplified = nounMatch[1];
-    } else {
-        // 模式2: 移除开头的冠词和形容词，保留最后的名词
-        simplified = simplified.replace(/^(?:a|an|the)\s+/i, '');
-
-        // 提取最后的1-2个核心词
-        const words = simplified.split(/\s+/);
-        if (words.length > 2) {
-            // 保留最后两个词（通常是 "形容词 + 名词" 或 "名词 + 名词"）
-            simplified = words.slice(-2).join(' ');
-        }
-    }
-
-    // 限制长度（最多40个字符）
-    if (simplified.length > 40) {
-        const words = simplified.split(/\s+/);
-        simplified = words.slice(-1)[0]; // 只保留最后一个词
-    }
-
-    return simplified.trim();
-}
-
-// 3. 智能简化中文翻译（提取核心词）
-function simplifyChinese(translation) {
-    if (!translation) return '';
-
-    // 检查是否包含中文字符
-    const hasChinese = /[\u4e00-\u9fa5]/.test(translation);
-    if (!hasChinese) {
-        // 如果没有中文，返回空（让调用者使用英文）
-        return '';
-    }
-
-    // 只保留中文、常用标点和空格
-    translation = translation.replace(/[^\u4e00-\u9fa5，。；！？、]/g, '');
-
-    // 移除常见的描述性前缀
-    translation = translation.replace(/^(一种|一个|某种|某个)/, '');
-
-    // 只保留逗号、句号前的第一部分
-    translation = translation.split(/[，；。！？]/)[0];
-
-    // 如果还是很长，尝试提取最后的核心名词
-    if (translation.length > 8) {
-        // 移除形容词性描述（如：大型的、小型的、常见的等）
-        const match = translation.match(/(.+)(的|地)(.+)/);
-        if (match && match[3]) {
-            translation = match[3]; // 提取"的/地"后面的核心词
-        } else {
-            // 如果还是太长，只保留前6个字
-            if (translation.length > 8) {
-                translation = translation.substring(0, 6);
-            }
-        }
-    }
-
-    return translation.trim();
-}
-
-// 4. 免费翻译 API (MyMemory) - 优化为简短翻译
+// 2. 免费翻译 API (MyMemory)
 async function translateToZh(text) {
     if (!text) return '';
 
-    // 先简化英文定义
-    const simplified = simplifyDefinition(text);
+    // 只取第一句，限制在 120 字符以内，避免 API 截断
+    const firstSentence = text.split(/[.;]/)[0].trim();
+    const toTranslate = firstSentence.length > 120 ? firstSentence.substring(0, 120) : firstSentence;
 
     try {
         const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(simplified)}&langpair=en|zh-CN`
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(toTranslate)}&langpair=en|zh-CN`
         );
         const data = await response.json();
 
         if (data.responseStatus === 200 && data.responseData?.translatedText) {
-            let translation = data.responseData.translatedText;
-
-            // 智能简化中文翻译
-            translation = simplifyChinese(translation);
-
-            // 如果简化后为空或很短，说明翻译质量不好
-            if (!translation || translation.length < 2) {
-                console.warn('翻译质量不佳:', text, '→', data.responseData.translatedText);
-                // 返回简化的英文（至少能看懂）
-                return simplified;
-            }
-
+            const translation = data.responseData.translatedText;
+            // 确认结果包含中文
+            if (!/[\u4e00-\u9fa5]/.test(translation)) return '';
             return translation;
         }
-        return simplified;
+        return '';
     } catch (e) {
         console.error('翻译失败:', e);
-        return simplified;
+        return '';
     }
 }
 
-// 4. 完整单词信息获取（优先使用预设词典）
+// 3. 完整单词信息获取（优先使用预设词典）
 async function fetchCompleteWordInfo(word) {
     const lowerWord = word.toLowerCase();
 
@@ -604,14 +518,14 @@ async function fetchCompleteWordInfo(word) {
     if (commonWordsMeanings[lowerWord]) {
         showFeedback(`✅ 查询成功：${word}`);
 
-        // 即使有预设翻译，也尝试获取音标
+        // 即使有预设翻译，也尝试获取音标和英文释义（作为记忆提示）
         const info = await fetchWordInfo(lowerWord);
 
         return {
             word: lowerWord,
             phonetic: info?.phonetic || '',
             meaning: commonWordsMeanings[lowerWord],
-            memoryTip: `记忆提示：${commonWordsMeanings[lowerWord]}`,
+            memoryTip: info?.englishMeaning || '',
             difficulty: Math.min(Math.ceil(lowerWord.length / 3), 5)
         };
     }
@@ -630,14 +544,14 @@ async function fetchCompleteWordInfo(word) {
         };
     }
 
-    // 翻译英文释义（已优化为简短翻译）
+    // 翻译英文释义
     const chineseMeaning = await translateToZh(info.englishMeaning);
 
     return {
         word: info.word,
         phonetic: info.phonetic,
         meaning: chineseMeaning || info.englishMeaning,
-        memoryTip: `记忆提示：${chineseMeaning || info.englishMeaning}`,
+        memoryTip: info.englishMeaning || '',
         difficulty: Math.min(Math.ceil(lowerWord.length / 3), 5)
     };
 }
