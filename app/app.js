@@ -167,10 +167,14 @@ function drop(ev) {
 // ========== 触摸支持 ==========
 let touchElement = null;
 let touchClone = null;
+let touchStartX = 0;
+let touchStartY = 0;
 
 function touchStart(event) {
     event.preventDefault();
     touchElement = event.target;
+    touchStartX = event.touches[0].pageX;
+    touchStartY = event.touches[0].pageY;
     touchClone = touchElement.cloneNode(true);
     touchClone.style.position = 'fixed';
     touchClone.style.zIndex = '1000';
@@ -192,6 +196,10 @@ function touchEnd(event) {
     if (!touchElement || !touchClone) return;
 
     const touch = event.changedTouches[0];
+    const dx = Math.abs(touch.pageX - touchStartX);
+    const dy = Math.abs(touch.pageY - touchStartY);
+    const isTap = dx < 10 && dy < 10;
+
     const slots = document.querySelectorAll('.slot');
     let dropped = false;
 
@@ -208,13 +216,21 @@ function touchEnd(event) {
         }
     });
 
+    touchClone.remove();
+    touchClone = null;
+
     if (!dropped) {
         touchElement.style.opacity = '1';
+        if (isTap) {
+            // 点击行为：放入第一个空槽（与 letterClick 逻辑一致）
+            const savedEl = touchElement;
+            touchElement = null;
+            letterClick(savedEl);
+            return;
+        }
     }
 
-    touchClone.remove();
     touchElement = null;
-    touchClone = null;
 }
 
 // ========== 点选交互 ==========
