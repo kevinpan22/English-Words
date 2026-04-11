@@ -352,6 +352,20 @@ body {
 }
 .btn-settings:hover { background: #EFE8FF; }
 
+/* 词组认读确认按钮 */
+.btn-recognition {
+    display: block;
+    margin: 14px auto 0;
+    background: linear-gradient(135deg, #80CAFF, #42A5F5);
+    font-size: 1.05rem;
+    padding: 13px 32px;
+    border-radius: 30px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    box-shadow: 0 4px 14px rgba(66, 165, 245, 0.4);
+}
+.btn-recognition:hover { box-shadow: 0 6px 18px rgba(66, 165, 245, 0.5); }
+
 /* 弹窗内通用按钮 */
 .btn-primary {
     background: linear-gradient(135deg, #7DDFAA, #3EC98A);

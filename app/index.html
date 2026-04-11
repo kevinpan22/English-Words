@@ -69,6 +69,9 @@
             <div id="slots" class="slots-container"></div>
             <div id="letters" class="letters-container"></div>
             <div id="feedback" class="feedback"></div>
+            <!-- 词组认读确认按钮（平时隐藏） -->
+            <button id="recognitionBtn" onclick="confirmRecognition()"
+                    class="btn btn-recognition" style="display:none">✓ 记住了，下一个</button>
         </main>
 
         <!-- 底部按钮组 -->
@@ -92,6 +95,8 @@
             <!-- 年级 -->
             <div class="cur-label">年级</div>
             <div class="cur-tabs" id="gradeTab">
+                <button class="cur-tab" onclick="selectGrade('一年级')">一年级</button>
+                <button class="cur-tab" onclick="selectGrade('二年级')">二年级</button>
                 <button class="cur-tab active" onclick="selectGrade('三年级')">三年级</button>
                 <button class="cur-tab" onclick="selectGrade('四年级')">四年级</button>
                 <button class="cur-tab" onclick="selectGrade('五年级')">五年级</button>
@@ -127,14 +132,16 @@
     <div id="importDialog" class="dialog">
         <div class="dialog-content">
             <h3>批量添加单词</h3>
-            <p class="dialog-hint">每行一个单词，格式：单词,音标,含义,记忆提示,难度</p>
-            <textarea id="wordInput" rows="8" placeholder="例如：
-hello,/həˈləʊ/,你好,打招呼的基础用语,1
-world,/wɜːld/,世界,地球就是一个世界,2
+            <p class="dialog-hint">每行一个单词或词组；或用逗号分隔多个单词：apple, banana, grape<br>完整格式：单词,/音标/,含义,记忆提示,难度</p>
+            <textarea id="wordInput" rows="8" placeholder="逗号分隔多个单词：
+apple, banana, orange, grape
 
-或者只输入单词（将自动查询）：
-apple
-banana"></textarea>
+每行一个单词或词组（自动查询）：
+elephant
+go to school
+
+完整格式：
+hello,/həˈləʊ/,你好,,1"></textarea>
             <label class="checkbox-label">
                 <input type="checkbox" id="replaceMode">
                 <span>替换原有词库（清除默认单词，只保留导入的）</span>

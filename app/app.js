@@ -83,7 +83,37 @@ function newWord() {
     document.getElementById('meaning').textContent = currentWord.meaning;
     document.getElementById('memoryTip').textContent = currentWord.memoryTip;
     document.getElementById('feedback').textContent = '';
-    setupGame();
+
+    // 词组走认读模式，单词走拼写游戏
+    if (currentWord.word.includes(' ')) {
+        showRecognitionMode();
+    } else {
+        setupGame();
+    }
+}
+
+// ========== 词组认读模式 ==========
+function showRecognitionMode() {
+    document.getElementById('slots').innerHTML = '';
+    document.getElementById('letters').innerHTML = '';
+    document.getElementById('currentWord').textContent = currentWord.word;
+    showFeedback('📖 词组认读 — 记住后点击下方按钮');
+    document.getElementById('recognitionBtn').style.display = 'inline-block';
+}
+
+function confirmRecognition() {
+    document.getElementById('recognitionBtn').style.display = 'none';
+    // 计入已学统计，但不计入正确率（无答题过程）
+    if (!statistics.learnedWords.includes(currentWord.word)) {
+        statistics.totalLearned++;
+        statistics.learnedWords.push(currentWord.word);
+    }
+    updateReviewSchedule();
+    updateDisplay();
+    saveProgress();
+    updateScore(2);
+    showFeedback('👍 已记住！');
+    setTimeout(newWord, 1200);
 }
 
 function setupGame() {
@@ -621,13 +651,21 @@ async function importWords() {
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
+        if (!line) continue;
+
         const parts = line.split(',').map(s => s.trim());
         const wordName = parts[0].toLowerCase();
-
         if (!wordName) continue;
 
-        if (parts.length >= 3) {
-            // 完整格式
+        // 完整格式：第一项,/音标/,释义,...
+        const isFullFormat = parts.length >= 3 && parts[1].startsWith('/');
+        // 逗号分隔词表：多个项，第二项不是音标也不含中文
+        const isCommaWordList = parts.length >= 2 && !isFullFormat
+                                && !parts[1].startsWith('/')
+                                && !/[\u4e00-\u9fa5]/.test(parts[1]);
+
+        if (isFullFormat) {
+            // 完整格式直接使用
             newWords.push({
                 word: wordName,
                 phonetic: parts[1] || '',
@@ -635,8 +673,18 @@ async function importWords() {
                 memoryTip: parts[3] || '',
                 difficulty: parseInt(parts[4]) || 1
             });
+        } else if (isCommaWordList) {
+            // 逗号分隔词表，每项单独查询
+            for (const item of parts) {
+                const w = item.trim().toLowerCase();
+                if (!w) continue;
+                showFeedback(`🔍 查询中：${w}...`);
+                const wordInfo = await fetchCompleteWordInfo(w);
+                newWords.push(wordInfo);
+                await new Promise(r => setTimeout(r, 500));
+            }
         } else {
-            // 只有单词，自动查询
+            // 单词或词组，自动查询
             showFeedback(`🔍 查询中：${wordName} (${i + 1}/${lines.length})`);
             const wordInfo = await fetchCompleteWordInfo(wordName);
             newWords.push(wordInfo);
