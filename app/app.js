@@ -662,13 +662,57 @@ async function importWords() {
     document.getElementById('wordInput').value = '';
 }
 
-// ========== DeepSeek AI 助手（可选） ==========
-function getDeepSeekKey() {
-    return localStorage.getItem('deepseekApiKey') || '';
+// ========== 多模型 AI 助手 ==========
+const AI_PROVIDERS = {
+    deepseek: {
+        name: 'DeepSeek',
+        url: 'https://api.deepseek.com/v1/chat/completions',
+        model: 'deepseek-chat',
+        hint: '👉 platform.deepseek.com 注册获取，价格超低'
+    },
+    zhipu: {
+        name: '智谱 GLM',
+        url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        model: 'glm-4-flash',
+        hint: '👉 open.bigmodel.cn 注册获取，有免费额度可用'
+    },
+    moonshot: {
+        name: 'Kimi',
+        url: 'https://api.moonshot.cn/v1/chat/completions',
+        model: 'moonshot-v1-8k',
+        hint: '👉 platform.moonshot.cn 注册获取'
+    }
+};
+
+function getAIConfig() {
+    const provider = localStorage.getItem('aiProvider') || 'deepseek';
+    // 兼容旧版 deepseekApiKey 存储方式
+    const key = localStorage.getItem(`aiKey_${provider}`)
+             || (provider === 'deepseek' ? localStorage.getItem('deepseekApiKey') : '')
+             || '';
+    return { provider, key, ...AI_PROVIDERS[provider] };
+}
+
+function selectProvider(provider) {
+    localStorage.setItem('aiProvider', provider);
+    document.querySelectorAll('.provider-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.provider === provider);
+    });
+    document.getElementById('providerHint').textContent = AI_PROVIDERS[provider].hint;
+    // 显示该服务已存的 Key
+    const saved = localStorage.getItem(`aiKey_${provider}`)
+               || (provider === 'deepseek' ? localStorage.getItem('deepseekApiKey') : '')
+               || '';
+    document.getElementById('apiKeyInput').value = saved;
 }
 
 function showAPIKeyDialog() {
-    document.getElementById('apiKeyInput').value = getDeepSeekKey();
+    const config = getAIConfig();
+    document.querySelectorAll('.provider-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.provider === config.provider);
+    });
+    document.getElementById('providerHint').textContent = config.hint;
+    document.getElementById('apiKeyInput').value = config.key;
     document.getElementById('apiKeyDialog').style.display = 'flex';
 }
 
@@ -676,15 +720,18 @@ function closeAPIKeyDialog() {
     document.getElementById('apiKeyDialog').style.display = 'none';
 }
 
-function saveAPIKey() {
+function saveAISettings() {
+    const provider = localStorage.getItem('aiProvider') || 'deepseek';
     const key = document.getElementById('apiKeyInput').value.trim();
     if (!key) {
-        showFeedback('⚠️ 请输入有效的 API Key');
+        showFeedback('⚠️ 请输入 API Key');
         return;
     }
-    localStorage.setItem('deepseekApiKey', key);
+    localStorage.setItem(`aiKey_${provider}`, key);
+    // 同步写旧 key，保持向后兼容
+    if (provider === 'deepseek') localStorage.setItem('deepseekApiKey', key);
     closeAPIKeyDialog();
-    showFeedback('✅ API Key 已保存');
+    showFeedback(`✅ ${AI_PROVIDERS[provider].name} Key 已保存`);
     setTimeout(() => showFeedback(''), 2000);
 }
 
@@ -693,17 +740,15 @@ function showAIChat() {
         showFeedback('⚠️ 请先选择一个单词');
         return;
     }
-
-    const apiKey = getDeepSeekKey();
-    if (!apiKey) {
-        showFeedback('⚠️ 请先配置 DeepSeek API Key');
+    const config = getAIConfig();
+    if (!config.key) {
+        showFeedback('⚠️ 请先配置 AI Key（点右下角 ⚙️）');
         setTimeout(() => showAPIKeyDialog(), 1000);
         return;
     }
-
     document.getElementById('aiChatWord').textContent = currentWord.word;
     document.getElementById('aiChatHistory').innerHTML =
-        '<p style="color:#999">可以问：造句、词根、近义词、用法区别…</p>';
+        `<p style="color:#aaa">用 ${config.name} 来帮你～可以问造句、词根、近义词…</p>`;
     document.getElementById('aiChatInput').value = '';
     document.getElementById('aiChatDialog').style.display = 'flex';
     document.getElementById('aiChatInput').focus();
@@ -716,34 +761,33 @@ function closeAIChat() {
 async function sendAIQuestion() {
     const input = document.getElementById('aiChatInput');
     const question = input.value.trim();
-
     if (!question || !currentWord) return;
 
-    const apiKey = getDeepSeekKey();
-    if (!apiKey) {
+    const config = getAIConfig();
+    if (!config.key) {
         showFeedback('⚠️ 请先配置 API Key');
         return;
     }
 
     const history = document.getElementById('aiChatHistory');
     history.innerHTML += `<p><strong>你：</strong>${question}</p>`;
-    history.innerHTML += '<p id="aiThinking" style="color:#aaa">AI 思考中…</p>';
+    history.innerHTML += `<p id="aiThinking" style="color:#aaa">${config.name} 思考中…</p>`;
     history.scrollTop = history.scrollHeight;
     input.value = '';
 
     try {
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        const response = await fetch(config.url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                'Authorization': `Bearer ${config.key}`
             },
             body: JSON.stringify({
-                model: 'deepseek-chat',
+                model: config.model,
                 messages: [
                     {
                         role: 'system',
-                        content: '你是英语单词学习助手，回答时中英文结合：英文例句/词汇用英文写，后面紧跟中文翻译或解释。格式简洁，适合学生阅读。'
+                        content: '你是英语单词学习助手，回答时中英文结合：英文例句/词汇用英文写，后面紧跟中文翻译或解释。格式简洁，适合中小学生阅读。'
                     },
                     {
                         role: 'user',
@@ -758,15 +802,13 @@ async function sendAIQuestion() {
         const data = await response.json();
         document.getElementById('aiThinking')?.remove();
 
-        if (data.error) {
-            throw new Error(data.error.message);
-        }
+        if (data.error) throw new Error(data.error.message);
 
         const answer = data.choices[0]?.message?.content || '无法获取回答';
-        history.innerHTML += `<p><strong>AI：</strong>${answer.replace(/\n/g, '<br>')}</p>`;
+        history.innerHTML += `<p><strong>${config.name}：</strong>${answer.replace(/\n/g, '<br>')}</p>`;
     } catch (e) {
         document.getElementById('aiThinking')?.remove();
-        history.innerHTML += `<p style="color:red">错误：${e.message}</p>`;
+        history.innerHTML += `<p style="color:#e53935">错误：${e.message}</p>`;
     }
 
     history.scrollTop = history.scrollHeight;
