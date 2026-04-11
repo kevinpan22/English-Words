@@ -207,6 +207,16 @@ body {
 .slot:not(:empty) {
     border-color: #4a90e2;
     background: #e3f2fd;
+    cursor: pointer;
+}
+
+.slot:not(:empty):hover {
+    background: #bbdefb;
+    border-color: #1976d2;
+}
+
+.slot:not(:empty):active {
+    transform: scale(0.93);
 }
 
 .letter {

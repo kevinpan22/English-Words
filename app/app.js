@@ -16,6 +16,9 @@ let reviewSchedule = {
     words: {}
 };
 
+// ========== 点选交互状态 ==========
+let draggingLid = null; // 当前拖拽的字母唯一 ID
+
 // ========== 音效 ==========
 const correctSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSp+zPDTiTYIG2W58OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a68OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBQ==');
 const wrongSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSp+zPDTiTYIG2W58OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a68OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBQ==');
@@ -88,14 +91,15 @@ function setupGame() {
     const slotsContainer = document.getElementById('slots');
     const lettersContainer = document.getElementById('letters');
 
-    // 创建空槽
+    // 创建空槽（支持点击回退）
     slotsContainer.innerHTML = letters.map(() =>
-        '<div class="slot" ondrop="drop(event)" ondragover="allowDrop(event)"></div>'
+        '<div class="slot" onclick="slotClick(this)" ondrop="drop(event)" ondragover="allowDrop(event)"></div>'
     ).join('');
 
-    // 创建字母
-    lettersContainer.innerHTML = letters.map(letter =>
-        `<div class="letter" draggable="true" ondragstart="drag(event)"
+    // 创建字母（data-lid 唯一标识，解决重复字母问题）
+    lettersContainer.innerHTML = letters.map((letter, i) =>
+        `<div class="letter" data-lid="${i}" draggable="true"
+              onclick="letterClick(this)" ondragstart="drag(event)"
               ontouchstart="touchStart(event)" ontouchmove="touchMove(event)"
               ontouchend="touchEnd(event)">${letter}</div>`
     ).join('');
@@ -108,6 +112,7 @@ function allowDrop(ev) {
 
 function drag(ev) {
     ev.dataTransfer.setData("text", ev.target.textContent);
+    draggingLid = ev.target.dataset.lid;
     ev.target.classList.add('dragging');
 }
 
@@ -116,15 +121,15 @@ function drop(ev) {
     const data = ev.dataTransfer.getData("text");
     const targetSlot = ev.target.classList.contains('slot') ? ev.target : ev.target.parentNode;
 
-    if (targetSlot.children.length === 0) {
+    // 用 textContent 判断是否为空，避免重复字母时覆盖已填槽
+    if (!targetSlot.textContent) {
         targetSlot.textContent = data;
-        // 移除被拖拽的字母
-        const letters = document.querySelectorAll('.letter');
-        letters.forEach(letter => {
-            if (letter.textContent === data && letter.classList.contains('dragging')) {
-                letter.remove();
-            }
+        targetSlot.dataset.lid = draggingLid || '';
+        // 用 lid 精准移除对应字母，防止重复字母误删
+        document.querySelectorAll('.letter').forEach(letter => {
+            if (letter.dataset.lid === draggingLid) letter.remove();
         });
+        draggingLid = null;
         checkAnswer();
     }
 }
@@ -164,8 +169,9 @@ function touchEnd(event) {
         const rect = slot.getBoundingClientRect();
         if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
             touch.pageY >= rect.top && touch.pageY <= rect.bottom &&
-            slot.children.length === 0) {
+            !slot.textContent) {
             slot.textContent = touchElement.textContent;
+            slot.dataset.lid = touchElement.dataset.lid || '';
             touchElement.remove();
             dropped = true;
             checkAnswer();
@@ -179,6 +185,42 @@ function touchEnd(event) {
     touchClone.remove();
     touchElement = null;
     touchClone = null;
+}
+
+// ========== 点选交互 ==========
+// 点击待选区字母 → 放入第一个空槽
+function letterClick(letterEl) {
+    const slots = document.querySelectorAll('.slot');
+    for (const slot of slots) {
+        if (!slot.textContent) {
+            slot.textContent = letterEl.textContent;
+            slot.dataset.lid = letterEl.dataset.lid || '';
+            letterEl.remove();
+            checkAnswer();
+            return;
+        }
+    }
+}
+
+// 点击已填格子 → 字母回到待选区末尾
+function slotClick(slotEl) {
+    if (!slotEl.textContent) return;
+
+    const letter = document.createElement('div');
+    letter.className = 'letter';
+    letter.textContent = slotEl.textContent;
+    letter.dataset.lid = slotEl.dataset.lid || '';
+    letter.setAttribute('draggable', 'true');
+    letter.setAttribute('onclick', 'letterClick(this)');
+    letter.setAttribute('ondragstart', 'drag(event)');
+    letter.setAttribute('ontouchstart', 'touchStart(event)');
+    letter.setAttribute('ontouchmove', 'touchMove(event)');
+    letter.setAttribute('ontouchend', 'touchEnd(event)');
+
+    document.getElementById('letters').appendChild(letter);
+
+    slotEl.textContent = '';
+    delete slotEl.dataset.lid;
 }
 
 // ========== 答案检查 ==========
