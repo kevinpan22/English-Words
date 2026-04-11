@@ -1,9 +1,10 @@
-const CACHE_NAME = 'word-master-v2.1-' + Date.now();
+const CACHE_NAME = 'word-master-v2.2-' + Date.now();
 const urlsToCache = [
     './index.html',
     './style.css',
     './app.js',
     './wordlist.js',
+    './curriculum.js',
     './icon-192.png'
 ];
 

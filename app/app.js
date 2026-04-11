@@ -814,6 +814,101 @@ async function sendAIQuestion() {
     history.scrollTop = history.scrollHeight;
 }
 
+// ========== 课本单元 ==========
+let selectedGrade = '三年级';
+let selectedTerm  = '上学期';
+let selectedUnit  = null;
+
+function showCurriculumDialog() {
+    selectedGrade = '三年级';
+    selectedTerm  = '上学期';
+    selectedUnit  = null;
+    refreshGradeTab();
+    refreshTermTab();
+    renderUnitList();
+    document.getElementById('unitPreview').style.display = 'none';
+    document.getElementById('curriculumDialog').style.display = 'flex';
+}
+
+function closeCurriculumDialog() {
+    document.getElementById('curriculumDialog').style.display = 'none';
+}
+
+function selectGrade(grade) {
+    selectedGrade = grade;
+    selectedUnit  = null;
+    refreshGradeTab();
+    refreshTermTab();
+    renderUnitList();
+    document.getElementById('unitPreview').style.display = 'none';
+}
+
+function selectTerm(term) {
+    selectedTerm = term;
+    selectedUnit = null;
+    refreshTermTab();
+    renderUnitList();
+    document.getElementById('unitPreview').style.display = 'none';
+}
+
+function refreshGradeTab() {
+    document.querySelectorAll('#gradeTab .cur-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === selectedGrade);
+    });
+}
+
+function refreshTermTab() {
+    document.querySelectorAll('#termTab .cur-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === selectedTerm);
+    });
+}
+
+function renderUnitList() {
+    const units = curriculum[selectedGrade]?.[selectedTerm];
+    if (!units) return;
+    document.getElementById('unitList').innerHTML = Object.keys(units).map(unit =>
+        `<button class="unit-btn" onclick="selectUnit('${unit.replace(/'/g, "\\'")}')">${unit}</button>`
+    ).join('');
+}
+
+function selectUnit(unit) {
+    selectedUnit = unit;
+    // 高亮选中
+    document.querySelectorAll('.unit-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === unit);
+    });
+    // 预览单词
+    const words = curriculum[selectedGrade]?.[selectedTerm]?.[unit] || [];
+    document.getElementById('previewCount').textContent = `（${words.length} 个单词）`;
+    document.getElementById('previewWords').innerHTML = words.map(w =>
+        `<span class="preview-chip">${w.word} <small>${w.meaning}</small></span>`
+    ).join('');
+    document.getElementById('unitPreview').style.display = 'block';
+}
+
+function loadUnitWords(mode) {
+    if (!selectedUnit) {
+        showFeedback('⚠️ 请先选择一个单元');
+        return;
+    }
+    const words = curriculum[selectedGrade]?.[selectedTerm]?.[selectedUnit] || [];
+    if (words.length === 0) return;
+
+    if (mode === 'replace') {
+        wordList = [...words];
+    } else {
+        words.forEach(w => {
+            if (!wordList.some(existing => existing.word === w.word)) {
+                wordList.push(w);
+            }
+        });
+    }
+    localStorage.setItem('customWords', JSON.stringify(wordList));
+    closeCurriculumDialog();
+    showFeedback(`✅ 已加载「${selectedUnit}」${words.length} 个单词`);
+    setTimeout(() => { showFeedback(''); newWord(); }, 1500);
+}
+
 // ========== 词库加载 ==========
 window.addEventListener('DOMContentLoaded', () => {
     const savedWords = localStorage.getItem('customWords');

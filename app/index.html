@@ -76,10 +76,51 @@
             <button onclick="newWord()" class="btn btn-next">🎲 下一词</button>
             <button onclick="reviewMistakes()" class="btn btn-review">📚 错词复习</button>
             <button onclick="showHint()" class="btn btn-hint">💡 提示</button>
-            <button onclick="showImportDialog()" class="btn btn-import">➕ 批量添加</button>
+            <button onclick="showCurriculumDialog()" class="btn btn-curriculum">📖 课本单元</button>
+            <button onclick="showImportDialog()" class="btn btn-import">➕ 自定义</button>
             <button onclick="showAIChat()" class="btn btn-ai">🤖 AI 问问</button>
             <button onclick="showAPIKeyDialog()" class="btn btn-settings">⚙️</button>
         </footer>
+    </div>
+
+    <!-- 课本单元选择弹窗 -->
+    <div id="curriculumDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>📖 按单元学习</h3>
+            <p class="dialog-hint">选择年级 → 学期 → 单元，开始练习</p>
+
+            <!-- 年级 -->
+            <div class="cur-label">年级</div>
+            <div class="cur-tabs" id="gradeTab">
+                <button class="cur-tab active" onclick="selectGrade('三年级')">三年级</button>
+                <button class="cur-tab" onclick="selectGrade('四年级')">四年级</button>
+                <button class="cur-tab" onclick="selectGrade('五年级')">五年级</button>
+                <button class="cur-tab" onclick="selectGrade('六年级')">六年级</button>
+            </div>
+
+            <!-- 学期 -->
+            <div class="cur-label">学期</div>
+            <div class="cur-tabs" id="termTab">
+                <button class="cur-tab active" onclick="selectTerm('上学期')">上学期</button>
+                <button class="cur-tab" onclick="selectTerm('下学期')">下学期</button>
+            </div>
+
+            <!-- 单元列表 -->
+            <div class="cur-label">单元</div>
+            <div id="unitList" class="unit-list"></div>
+
+            <!-- 已选单词预览 -->
+            <div id="unitPreview" class="unit-preview" style="display:none">
+                <div class="cur-label">单词预览 <span id="previewCount"></span></div>
+                <div id="previewWords" class="preview-words"></div>
+            </div>
+
+            <div class="dialog-buttons">
+                <button onclick="loadUnitWords('replace')" class="btn btn-primary">✅ 替换词库练习</button>
+                <button onclick="loadUnitWords('add')" class="btn btn-curriculum" style="flex:1">➕ 加入词库</button>
+                <button onclick="closeCurriculumDialog()" class="btn btn-secondary" style="flex:0.6">取消</button>
+            </div>
+        </div>
     </div>
 
     <!-- 批量导入弹窗 -->
@@ -140,6 +181,7 @@ banana"></textarea>
 
     <!-- 脚本引入 -->
     <script src="wordlist.js"></script>
+    <script src="curriculum.js"></script>
     <script src="app.js"></script>
     <script>
         // Service Worker 注册
