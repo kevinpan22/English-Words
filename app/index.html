@@ -67,11 +67,51 @@
 
             <!-- 拼写区域 -->
             <div id="slots" class="slots-container"></div>
-            <div id="letters" class="letters-container"></div>
+            <div class="letters-row">
+                <div id="letters" class="letters-container"></div>
+                <button id="toggleLettersBtn" class="btn-toggle-letters" onclick="toggleLettersPool()" title="显示/隐藏字母池">👁</button>
+            </div>
             <div id="feedback" class="feedback"></div>
             <!-- 词组认读确认按钮（平时隐藏） -->
             <button id="recognitionBtn" onclick="confirmRecognition()"
                     class="btn btn-recognition" style="display:none">✓ 记住了，下一个</button>
+
+            <!-- 虚拟键盘（拼写模式时显示） -->
+            <div id="virtualKeyboard" class="virtual-keyboard" style="display:none">
+                <div class="kb-row">
+                    <button class="kb-key" onclick="handleKeyInput('q')">Q</button>
+                    <button class="kb-key" onclick="handleKeyInput('w')">W</button>
+                    <button class="kb-key" onclick="handleKeyInput('e')">E</button>
+                    <button class="kb-key" onclick="handleKeyInput('r')">R</button>
+                    <button class="kb-key" onclick="handleKeyInput('t')">T</button>
+                    <button class="kb-key" onclick="handleKeyInput('y')">Y</button>
+                    <button class="kb-key" onclick="handleKeyInput('u')">U</button>
+                    <button class="kb-key" onclick="handleKeyInput('i')">I</button>
+                    <button class="kb-key" onclick="handleKeyInput('o')">O</button>
+                    <button class="kb-key" onclick="handleKeyInput('p')">P</button>
+                </div>
+                <div class="kb-row">
+                    <button class="kb-key" onclick="handleKeyInput('a')">A</button>
+                    <button class="kb-key" onclick="handleKeyInput('s')">S</button>
+                    <button class="kb-key" onclick="handleKeyInput('d')">D</button>
+                    <button class="kb-key" onclick="handleKeyInput('f')">F</button>
+                    <button class="kb-key" onclick="handleKeyInput('g')">G</button>
+                    <button class="kb-key" onclick="handleKeyInput('h')">H</button>
+                    <button class="kb-key" onclick="handleKeyInput('j')">J</button>
+                    <button class="kb-key" onclick="handleKeyInput('k')">K</button>
+                    <button class="kb-key" onclick="handleKeyInput('l')">L</button>
+                </div>
+                <div class="kb-row">
+                    <button class="kb-key" onclick="handleKeyInput('z')">Z</button>
+                    <button class="kb-key" onclick="handleKeyInput('x')">X</button>
+                    <button class="kb-key" onclick="handleKeyInput('c')">C</button>
+                    <button class="kb-key" onclick="handleKeyInput('v')">V</button>
+                    <button class="kb-key" onclick="handleKeyInput('b')">B</button>
+                    <button class="kb-key" onclick="handleKeyInput('n')">N</button>
+                    <button class="kb-key" onclick="handleKeyInput('m')">M</button>
+                    <button class="kb-key kb-back" onclick="handleBackspace()">⌫</button>
+                </div>
+            </div>
         </main>
 
         <!-- 底部按钮组 -->
@@ -81,6 +121,7 @@
             <button onclick="showHint()" class="btn btn-hint">💡 提示</button>
             <button onclick="showCurriculumDialog()" class="btn btn-curriculum">📖 课本单元</button>
             <button onclick="showImportDialog()" class="btn btn-import">➕ 自定义</button>
+            <button onclick="showWordListDialog()" class="btn btn-wordlist">📋 词库</button>
             <button onclick="showAIChat()" class="btn btn-ai">🤖 AI 问问</button>
             <button onclick="showAPIKeyDialog()" class="btn btn-settings">⚙️</button>
         </footer>
@@ -101,6 +142,9 @@
                 <button class="cur-tab" onclick="selectGrade('四年级')">四年级</button>
                 <button class="cur-tab" onclick="selectGrade('五年级')">五年级</button>
                 <button class="cur-tab" onclick="selectGrade('六年级')">六年级</button>
+                <button class="cur-tab" onclick="selectGrade('初一')">初一</button>
+                <button class="cur-tab" onclick="selectGrade('初二')">初二</button>
+                <button class="cur-tab" onclick="selectGrade('初三')">初三</button>
             </div>
 
             <!-- 学期 -->
@@ -124,6 +168,21 @@
                 <button onclick="loadUnitWords('replace')" class="btn btn-primary">✅ 替换词库练习</button>
                 <button onclick="loadUnitWords('add')" class="btn btn-curriculum" style="flex:1">➕ 加入词库</button>
                 <button onclick="closeCurriculumDialog()" class="btn btn-secondary" style="flex:0.6">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 词库查看弹窗 -->
+    <div id="wordListDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>📋 当前词库 <span id="wordListCount" style="font-size:0.85em;color:#888"></span></h3>
+            <div class="wl-toolbar">
+                <input type="text" id="wlSearch" class="wl-search input-field" placeholder="搜索单词或含义…" oninput="filterWordList()">
+                <button onclick="resetProgress()" class="btn btn-danger-sm">🔄 重置进度</button>
+            </div>
+            <div id="wordListItems" class="word-list-items"></div>
+            <div class="dialog-buttons">
+                <button onclick="closeWordListDialog()" class="btn btn-secondary">关闭</button>
             </div>
         </div>
     </div>

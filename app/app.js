@@ -19,9 +19,43 @@ let reviewSchedule = {
 // ========== 点选交互状态 ==========
 let draggingLid = null; // 当前拖拽的字母唯一 ID
 
-// ========== 音效 ==========
-const correctSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSp+zPDTiTYIG2W58OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a68OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBQ==');
-const wrongSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSp+zPDTiTYIG2W58OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a68OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBSd+zPDSiTYIG2a78OScTgwNUKzn77ViFQU7k9n0yXkqBQ==');
+// ========== 音效（Web Audio API 生成，避免 base64 重复和声音相同问题）==========
+function playCorrectSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // 上升三音符：C5 → E5 → G5，清脆愉快
+        [523, 659, 784].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const t = ctx.currentTime + i * 0.13;
+            gain.gain.setValueAtTime(0.28, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            osc.start(t);
+            osc.stop(t + 0.22);
+        });
+    } catch (e) { /* 浏览器不支持时静默 */ }
+}
+
+function playWrongSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // 低沉锯齿波，短促有力
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.value = 200;
+        gain.gain.setValueAtTime(0.22, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+    } catch (e) { /* 浏览器不支持时静默 */ }
+}
 
 // ========== 初始化 ==========
 window.addEventListener('load', () => {
@@ -61,7 +95,15 @@ function saveProgress() {
         reviewSchedule,
         timestamp: Date.now()
     };
-    localStorage.setItem('learningProgress', JSON.stringify(progress));
+    try {
+        localStorage.setItem('learningProgress', JSON.stringify(progress));
+    } catch (e) {
+        // QuotaExceededError：裁剪 learnedWords 后重试
+        if (statistics.learnedWords.length > 300) {
+            statistics.learnedWords = statistics.learnedWords.slice(-300);
+        }
+        try { localStorage.setItem('learningProgress', JSON.stringify(progress)); } catch (_) {}
+    }
 }
 
 function updateDisplay() {
@@ -96,14 +138,29 @@ function newWord() {
 function showRecognitionMode() {
     document.getElementById('slots').innerHTML = '';
     document.getElementById('letters').innerHTML = '';
-    document.getElementById('currentWord').textContent = currentWord.word;
-    showFeedback('📖 词组认读 — 记住后点击下方按钮');
-    document.getElementById('recognitionBtn').style.display = 'inline-block';
+    document.getElementById('currentWord').textContent = '?????';
+    showFeedback('📖 词组认读 — 先想想，再揭示');
+    const btn = document.getElementById('recognitionBtn');
+    btn.textContent = '👁 揭示词组';
+    btn.dataset.revealed = 'false';
+    btn.style.display = 'inline-block';
+    document.getElementById('virtualKeyboard').style.display = 'none';
+    document.getElementById('toggleLettersBtn').style.display = 'none';
 }
 
 function confirmRecognition() {
-    document.getElementById('recognitionBtn').style.display = 'none';
-    // 计入已学统计，但不计入正确率（无答题过程）
+    const btn = document.getElementById('recognitionBtn');
+    // 第一次点击：揭示词组
+    if (btn.dataset.revealed !== 'true') {
+        document.getElementById('currentWord').textContent = currentWord.word;
+        showFeedback('📖 看看这个词组，记住了再点下方按钮');
+        btn.textContent = '✓ 记住了，下一个';
+        btn.dataset.revealed = 'true';
+        return;
+    }
+    // 第二次点击：确认并进入下一词
+    btn.style.display = 'none';
+    btn.dataset.revealed = 'false';
     if (!statistics.learnedWords.includes(currentWord.word)) {
         statistics.totalLearned++;
         statistics.learnedWords.push(currentWord.word);
@@ -117,6 +174,18 @@ function confirmRecognition() {
 }
 
 function setupGame() {
+    document.getElementById('virtualKeyboard').style.display = 'flex';
+    const toggleBtn = document.getElementById('toggleLettersBtn');
+    toggleBtn.style.display = '';
+    // 保持用户上次选择的字母池显示状态，仅同步按钮图标
+    const lettersDiv = document.getElementById('letters');
+    if (lettersDiv.style.display === 'none') {
+        toggleBtn.textContent = '⌨️';
+        toggleBtn.title = '显示字母池';
+    } else {
+        toggleBtn.textContent = '👁';
+        toggleBtn.title = '隐藏字母池';
+    }
     const letters = currentWord.word.split('').sort(() => Math.random() - 0.5);
     const slotsContainer = document.getElementById('slots');
     const lettersContainer = document.getElementById('letters');
@@ -252,6 +321,14 @@ function letterClick(letterEl) {
 function slotClick(slotEl) {
     if (!slotEl.textContent) return;
 
+    // 键盘打入的字母（typed 标记）不属于字母池，直接清空槽即可，不还池子
+    if (slotEl.dataset.typed === 'true') {
+        slotEl.textContent = '';
+        delete slotEl.dataset.lid;
+        delete slotEl.dataset.typed;
+        return;
+    }
+
     const letter = document.createElement('div');
     letter.className = 'letter';
     letter.textContent = slotEl.textContent;
@@ -301,10 +378,9 @@ function handleCorrect() {
     document.getElementById('currentWord').textContent = currentWord.word;
     showFeedback('🎉 太棒了！');
 
-    correctSound.play().then(() => {
-        speakText('你真棒', 'zh-CN');
-        setTimeout(() => playCurrentWord(), 1000);
-    });
+    playCorrectSound();
+    speakText('你真棒', 'zh-CN');
+    setTimeout(() => playCurrentWord(), 1000);
 
     updateScore(5 * (currentWord.difficulty || 1));
     updateStreak(true);
@@ -313,9 +389,8 @@ function handleCorrect() {
 
 function handleWrong() {
     showFeedback('❌ 再试试~');
-    wrongSound.play().then(() => {
-        speakText('加油，再试一次', 'zh-CN');
-    });
+    playWrongSound();
+    speakText('加油，再试一次', 'zh-CN');
 
     if (!mistakesList.find(w => w.word === currentWord.word)) {
         mistakesList.push(currentWord);
@@ -365,6 +440,27 @@ function checkReviewWords() {
 }
 
 // ========== 语音功能 ==========
+// 缓存找到的普通话声音（避免每次都遍历）
+let _zhCNVoice = null;
+
+function getMandarinVoice() {
+    if (_zhCNVoice) return _zhCNVoice;
+    const voices = speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    // 优先选语言标记为 zh-CN 且名字不含粤语关键词的声音
+    _zhCNVoice = voices.find(v =>
+        v.lang === 'zh-CN' && !/(cantonese|粵|廣東|yue|HK)/i.test(v.name)
+    ) || voices.find(v => v.lang === 'zh-CN')
+      || voices.find(v => v.lang.startsWith('zh'))
+      || null;
+    return _zhCNVoice;
+}
+
+// 当系统语音列表变化时重置缓存
+if ('speechSynthesis' in window) {
+    speechSynthesis.addEventListener('voiceschanged', () => { _zhCNVoice = null; });
+}
+
 function playCurrentWord() {
     if (currentWord && 'speechSynthesis' in window) {
         speakText(currentWord.word, 'en-US', 0.8);
@@ -372,13 +468,91 @@ function playCurrentWord() {
 }
 
 function speakText(text, lang = 'en-US', rate = 1) {
+    if (!('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
     utterance.rate = rate;
+    // zh-CN 时主动选普通话声音，避免浏览器 fallback 到粤语
+    if (lang === 'zh-CN') {
+        const voice = getMandarinVoice();
+        if (voice) utterance.voice = voice;
+    }
     speechSynthesis.speak(utterance);
 }
 
 // ========== 辅助功能 ==========
+// ========== 词库管理 ==========
+let _wlFilter = '';
+
+function showWordListDialog() {
+    _wlFilter = '';
+    document.getElementById('wlSearch').value = '';
+    renderWordList();
+    document.getElementById('wordListDialog').style.display = 'flex';
+}
+
+function closeWordListDialog() {
+    document.getElementById('wordListDialog').style.display = 'none';
+}
+
+function filterWordList() {
+    _wlFilter = document.getElementById('wlSearch').value.trim().toLowerCase();
+    renderWordList();
+}
+
+function renderWordList() {
+    const filtered = wordList.map((w, i) => ({ w, i }))
+        .filter(({ w }) => !_wlFilter ||
+            w.word.toLowerCase().includes(_wlFilter) ||
+            (w.meaning && w.meaning.includes(_wlFilter)));
+    document.getElementById('wordListCount').textContent =
+        _wlFilter ? `(${filtered.length} / ${wordList.length} 个)` : `(共 ${wordList.length} 个)`;
+    document.getElementById('wordListItems').innerHTML = filtered.length
+        ? filtered.map(({ w, i }) =>
+            `<div class="wl-item">
+                <span class="wl-word">${w.word}</span>
+                <span class="wl-meaning">${w.meaning || ''}</span>
+                <button class="wl-del" onclick="removeWordFromList(${i})" title="移除">×</button>
+            </div>`
+          ).join('')
+        : '<div class="wl-empty">没有匹配的单词</div>';
+}
+
+function removeWordFromList(index) {
+    wordList.splice(index, 1);
+    localStorage.setItem('customWords', JSON.stringify(wordList));
+    renderWordList();
+    // 更新计数
+    document.getElementById('wordListCount').textContent =
+        _wlFilter ? `(筛选中 / ${wordList.length} 个)` : `(共 ${wordList.length} 个)`;
+}
+
+function resetProgress() {
+    if (!confirm('确定要重置所有学习记录吗？\n（词库不变，仅清空分数/连续/正确率/复习计划）')) return;
+    score = 0; streak = 0; mistakesList = [];
+    statistics = { totalLearned: 0, correctRate: 0, totalAttempts: 0, successfulAttempts: 0, learnedWords: [], lastStudyDate: null };
+    reviewSchedule = { intervals: [1, 2, 4, 7, 15, 30], words: {} };
+    updateDisplay();
+    saveProgress();
+    closeWordListDialog();
+    showFeedback('✅ 学习记录已重置');
+    setTimeout(() => showFeedback(''), 2000);
+}
+
+function toggleLettersPool() {
+    const letters = document.getElementById('letters');
+    const btn = document.getElementById('toggleLettersBtn');
+    if (letters.style.display === 'none') {
+        letters.style.display = '';
+        btn.textContent = '👁';
+        btn.title = '隐藏字母池';
+    } else {
+        letters.style.display = 'none';
+        btn.textContent = '⌨️';
+        btn.title = '显示字母池';
+    }
+}
+
 function showHint() {
     document.getElementById('currentWord').textContent = currentWord.word;
     setTimeout(() => {
@@ -972,6 +1146,52 @@ function loadUnitWords(mode) {
     showFeedback(`✅ 已加载「${selectedUnit}」${words.length} 个单词`);
     setTimeout(() => { showFeedback(''); newWord(); }, 1500);
 }
+
+// ========== 键盘输入 ==========
+
+// 将字母填入下一个空槽（虚拟键盘按钮 & 实体键盘共用）
+function handleKeyInput(letter) {
+    const slots = document.querySelectorAll('.slot');
+    // 只在拼写模式下处理（有 slot 且虚拟键盘可见）
+    if (!slots.length || document.getElementById('virtualKeyboard').style.display === 'none') return;
+    for (const slot of slots) {
+        if (!slot.textContent) {
+            slot.textContent = letter.toLowerCase();
+            slot.dataset.typed = 'true';
+            checkAnswer();
+            return;
+        }
+    }
+}
+
+// 清除最后一个已填的槽
+function handleBackspace() {
+    const slots = [...document.querySelectorAll('.slot')];
+    if (!slots.length || document.getElementById('virtualKeyboard').style.display === 'none') return;
+    for (let i = slots.length - 1; i >= 0; i--) {
+        if (slots[i].textContent) {
+            slots[i].textContent = '';
+            delete slots[i].dataset.lid;
+            delete slots[i].dataset.typed;
+            return;
+        }
+    }
+}
+
+// 实体键盘监听（电脑 & 平板外接键盘）
+document.addEventListener('keydown', (e) => {
+    // 如果焦点在输入框/文本域，不拦截
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    // 如果有弹窗打开，不拦截
+    if ([...document.querySelectorAll('.dialog')].some(d => d.style.display === 'flex')) return;
+
+    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        handleKeyInput(e.key.toLowerCase());
+    } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+    }
+});
 
 // ========== 词库加载 ==========
 window.addEventListener('DOMContentLoaded', () => {
