@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="初中背单词">
+    <meta name="theme-color" content="#4a90e2">
+    <title>初中背单词 - 译林版 7-9年级</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ===== 弹跳图片画布（键盘区域两侧）===== */
+        #bouncingCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* ===== 答案区左右图片（a.jpeg / b.jpeg）===== */
+        .word-card-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .deco-answer {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 10px;
+            flex-shrink: 0;
+            opacity: 0.93;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+        /* ===== 字母槽区左右图片（1~4.jpeg）===== */
+        .slots-area-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+        }
+        .slots-side-imgs {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .slots-side-imgs img {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            opacity: 0.92;
+        }
+        #slots { flex: 1; min-width: 0; }
+
+        /* 屏幕较窄时缩小侧图，避免挤压主内容 */
+        @media (max-width: 420px) {
+            .deco-answer { width: 38px; height: 38px; border-radius: 7px; }
+            .slots-side-imgs img { width: 32px; height: 32px; }
+            .word-card-wrapper { gap: 5px; }
+            .slots-area-wrapper { gap: 4px; }
+        }
+        @media (min-width: 768px) {
+            .deco-answer { width: 70px; height: 70px; border-radius: 12px; }
+            .slots-side-imgs img { width: 58px; height: 58px; }
+        }
+
+        /* ===== 键盘区包装 ===== */
+        .keyboard-wrapper { position: relative; width: 100%; }
+
+        /* z-index 确保主内容在画布上方 */
+        .container { position: relative; z-index: 1; }
+    </style>
+</head>
+<body>
+    <!-- 弹跳图片画布（键盘区域两侧） -->
+    <canvas id="bouncingCanvas"></canvas>
+
+    <!-- 启动屏幕 -->
+    <div id="splashScreen" class="splash-screen">
+        <img src="icon-192.png" alt="初中背单词">
+        <p>初中背单词</p>
+        <small>译林版 7-9年级 · 手机平板全适配</small>
+    </div>
+
+    <div class="container">
+        <!-- 顶部计分板 -->
+        <header class="score-board">
+            <div class="score-item">
+                <span class="score-label">总分</span>
+                <span id="score" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">连续</span>
+                <span id="streak" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">已学</span>
+                <span id="totalLearned" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">正确率</span>
+                <span id="correctRate" class="score-value">0%</span>
+            </div>
+        </header>
+
+        <!-- 单词卡片（含答案区左右图片） -->
+        <main class="main-content">
+            <div class="word-card-wrapper">
+                <!-- 答案区左侧 a.jpeg -->
+                <img class="deco-answer" src="a.jpeg" alt="" onerror="this.style.display='none'">
+
+                <div class="word-card" style="flex:1;min-width:0">
+                    <div class="word-header">
+                        <span id="currentWord" class="word-text">Welcome</span>
+                        <button onclick="playCurrentWord()" class="sound-btn" aria-label="播放发音">🔊</button>
+                    </div>
+                    <div id="phonetic" class="phonetic">/ˈwelkəm/</div>
+                    <div id="meaning" class="meaning">欢迎</div>
+                    <div id="memoryTip" class="memory-tip">开始学习吧！</div>
+                </div>
+
+                <!-- 答案区右侧 b.jpeg -->
+                <img class="deco-answer" src="b.jpeg" alt="" onerror="this.style.display='none'">
+            </div>
+
+            <!-- 字母槽区域（含左右图片） -->
+            <div class="slots-area-wrapper">
+                <!-- 字母槽左侧 2_t.png -->
+                <div class="slots-side-imgs">
+                    <img src="2_t.png" alt="" onerror="this.style.display='none'">
+                </div>
+
+                <div id="slots" class="slots-container"></div>
+
+                <!-- 字母槽右侧 3_t.png -->
+                <div class="slots-side-imgs">
+                    <img src="3_t.png" alt="" onerror="this.style.display='none'">
+                </div>
+            </div>
+
+            <div class="letters-row">
+                <div id="letters" class="letters-container"></div>
+                <button id="toggleLettersBtn" class="btn-toggle-letters" onclick="toggleLettersPool()" title="显示/隐藏字母池">👁</button>
+            </div>
+            <div id="feedback" class="feedback"></div>
+            <button id="recognitionBtn" onclick="confirmRecognition()"
+                    class="btn btn-recognition" style="display:none">✓ 记住了，下一个</button>
+
+            <!-- 虚拟键盘（键盘区两侧为弹跳图片） -->
+            <div class="keyboard-wrapper" id="keyboardWrapper">
+                <div id="virtualKeyboard" class="virtual-keyboard" style="display:none">
+                    <div class="kb-row">
+                        <button class="kb-key" onclick="handleKeyInput('q')">Q</button>
+                        <button class="kb-key" onclick="handleKeyInput('w')">W</button>
+                        <button class="kb-key" onclick="handleKeyInput('e')">E</button>
+                        <button class="kb-key" onclick="handleKeyInput('r')">R</button>
+                        <button class="kb-key" onclick="handleKeyInput('t')">T</button>
+                        <button class="kb-key" onclick="handleKeyInput('y')">Y</button>
+                        <button class="kb-key" onclick="handleKeyInput('u')">U</button>
+                        <button class="kb-key" onclick="handleKeyInput('i')">I</button>
+                        <button class="kb-key" onclick="handleKeyInput('o')">O</button>
+                        <button class="kb-key" onclick="handleKeyInput('p')">P</button>
+                    </div>
+                    <div class="kb-row">
+                        <button class="kb-key" onclick="handleKeyInput('a')">A</button>
+                        <button class="kb-key" onclick="handleKeyInput('s')">S</button>
+                        <button class="kb-key" onclick="handleKeyInput('d')">D</button>
+                        <button class="kb-key" onclick="handleKeyInput('f')">F</button>
+                        <button class="kb-key" onclick="handleKeyInput('g')">G</button>
+                        <button class="kb-key" onclick="handleKeyInput('h')">H</button>
+                        <button class="kb-key" onclick="handleKeyInput('j')">J</button>
+                        <button class="kb-key" onclick="handleKeyInput('k')">K</button>
+                        <button class="kb-key" onclick="handleKeyInput('l')">L</button>
+                    </div>
+                    <div class="kb-row">
+                        <button class="kb-key" onclick="handleKeyInput('z')">Z</button>
+                        <button class="kb-key" onclick="handleKeyInput('x')">X</button>
+                        <button class="kb-key" onclick="handleKeyInput('c')">C</button>
+                        <button class="kb-key" onclick="handleKeyInput('v')">V</button>
+                        <button class="kb-key" onclick="handleKeyInput('b')">B</button>
+                        <button class="kb-key" onclick="handleKeyInput('n')">N</button>
+                        <button class="kb-key" onclick="handleKeyInput('m')">M</button>
+                        <button class="kb-key kb-back" onclick="handleBackspace()">⌫</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 底部按钮组 -->
+        <footer class="footer-buttons">
+            <button onclick="newWord()" class="btn btn-next">🎲 下一词</button>
+            <button onclick="reviewMistakes()" class="btn btn-review">📚 错词复习</button>
+            <button onclick="showHint()" class="btn btn-hint">💡 提示</button>
+            <button onclick="showCurriculumDialog()" class="btn btn-curriculum">📖 课本单元</button>
+            <button onclick="showImportDialog()" class="btn btn-import">➕ 自定义</button>
+            <button onclick="showWordListDialog()" class="btn btn-wordlist">📋 词库</button>
+            <button onclick="showAIChat()" class="btn btn-ai">🤖 AI 问问</button>
+            <button onclick="showAPIKeyDialog()" class="btn btn-settings">⚙️</button>
+        </footer>
+    </div>
+
+    <!-- 课本单元选择弹窗 -->
+    <div id="curriculumDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>📖 按单元学习</h3>
+            <p class="dialog-hint">选择年级 → 册次 → 单元，开始练习</p>
+
+            <!-- 年级 -->
+            <div class="cur-label">年级</div>
+            <div class="cur-tabs" id="gradeTab">
+                <button class="cur-tab active" onclick="selectGrade('7年级')">7年级</button>
+                <button class="cur-tab" onclick="selectGrade('8年级')">8年级</button>
+                <button class="cur-tab" onclick="selectGrade('9年级')">9年级</button>
+            </div>
+
+            <!-- 册次（由JS动态渲染） -->
+            <div class="cur-label">册次</div>
+            <div class="cur-tabs" id="termTab"></div>
+
+            <!-- 单元列表 -->
+            <div class="cur-label">单元</div>
+            <div id="unitList" class="unit-list"></div>
+
+            <!-- 已选单词预览 -->
+            <div id="unitPreview" class="unit-preview" style="display:none">
+                <div class="cur-label">单词预览 <span id="previewCount"></span></div>
+                <div id="previewWords" class="preview-words"></div>
+            </div>
+
+            <div class="dialog-buttons">
+                <button onclick="loadUnitWords('replace')" class="btn btn-primary">✅ 替换词库练习</button>
+                <button onclick="loadUnitWords('add')" class="btn btn-curriculum" style="flex:1">➕ 加入词库</button>
+                <button onclick="closeCurriculumDialog()" class="btn btn-secondary" style="flex:0.6">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 词库查看弹窗 -->
+    <div id="wordListDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>📋 当前词库 <span id="wordListCount" style="font-size:0.85em;color:#888"></span></h3>
+            <div class="wl-toolbar">
+                <input type="text" id="wlSearch" class="wl-search input-field" placeholder="搜索单词或含义…" oninput="filterWordList()">
+                <button onclick="resetProgress()" class="btn btn-danger-sm">🔄 重置进度</button>
+            </div>
+            <div id="wordListItems" class="word-list-items"></div>
+            <div class="dialog-buttons">
+                <button onclick="closeWordListDialog()" class="btn btn-secondary">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量导入弹窗 -->
+    <div id="importDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>批量添加单词</h3>
+            <p class="dialog-hint">每行一个单词或词组；或用逗号分隔多个单词：apple, banana, grape<br>完整格式：单词,/音标/,含义,记忆提示,难度</p>
+            <textarea id="wordInput" rows="8" placeholder="逗号分隔多个单词：
+apple, banana, orange, grape
+
+每行一个单词或词组（自动查询）：
+elephant
+go to school
+
+完整格式：
+hello,/həˈləʊ/,你好,,1"></textarea>
+            <label class="checkbox-label">
+                <input type="checkbox" id="replaceMode">
+                <span>替换原有词库（清除默认单词，只保留导入的）</span>
+            </label>
+            <div class="dialog-buttons">
+                <button onclick="importWords()" class="btn btn-primary">导入</button>
+                <button onclick="closeImportDialog()" class="btn btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 助手设置弹窗 -->
+    <div id="apiKeyDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>🤖 AI 小助手设置</h3>
+            <p class="dialog-hint">选一个 AI 小帮手，粘贴 Key 就能用啦～</p>
+            <div class="provider-tabs" id="providerTabs">
+                <button class="provider-tab" data-provider="deepseek" onclick="selectProvider('deepseek')">🚀 DeepSeek</button>
+                <button class="provider-tab" data-provider="zhipu"    onclick="selectProvider('zhipu')">🧠 智谱 GLM</button>
+                <button class="provider-tab" data-provider="moonshot" onclick="selectProvider('moonshot')">🌙 Kimi</button>
+            </div>
+            <p class="provider-hint" id="providerHint"></p>
+            <input type="password" id="apiKeyInput" placeholder="粘贴 API Key 到这里…" class="input-field">
+            <div class="dialog-buttons">
+                <button onclick="saveAISettings()" class="btn btn-primary">✅ 保存</button>
+                <button onclick="closeAPIKeyDialog()" class="btn btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 助手弹窗 -->
+    <div id="aiChatDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>AI 助手 — <span id="aiChatWord" class="ai-word"></span></h3>
+            <div id="aiChatHistory" class="chat-history"></div>
+            <input type="text" id="aiChatInput" placeholder="例句？词根？近义词？…"
+                   class="input-field" onkeydown="if(event.key==='Enter')sendAIQuestion()">
+            <div class="dialog-buttons">
+                <button onclick="sendAIQuestion()" class="btn btn-primary">发送</button>
+                <button onclick="closeAIChat()" class="btn btn-secondary">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本引入 -->
+    <script src="wordlist.js"></script>
+    <script src="curriculum.js"></script>
+    <script src="app.js"></script>
+    <script src="bouncing.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(() => console.log('SW OK'))
+                    .catch(e => console.log('SW 失败:', e));
+            });
+        }
+    </script>
+</body>
+</html>
